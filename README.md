@@ -16,20 +16,25 @@ report and turns a hit into a non-zero exit.
   run: dotnet restore
 
 - name: Vulnerability scan
-  uses: iyulab/dotnet-ci-actions/vulnerability-scan@main
+  uses: iyulab/dotnet-ci-actions/vulnerability-scan@<commit-sha>  # pin to a commit, not @main
 ```
 
 With an explicit solution/project file:
 
 ```yaml
 - name: Vulnerability scan
-  uses: iyulab/dotnet-ci-actions/vulnerability-scan@main
+  uses: iyulab/dotnet-ci-actions/vulnerability-scan@<commit-sha>  # pin to a commit, not @main
   with:
     project: MySolution.slnx
 ```
 
 **Requires**: dependencies already restored (`dotnet restore` run earlier in the
 job) and `dotnet` on `PATH` (e.g. via `actions/setup-dotnet`).
+
+**Pin to a commit SHA**, not `@main` — a branch ref is mutable, so referencing it
+lets this repo change what a consumer's CI runs without that consumer reviewing
+or approving the change. Update the pin when you intentionally want a newer
+version of the action.
 
 | Input | Required | Default | Description |
 |---|---|---|---|
