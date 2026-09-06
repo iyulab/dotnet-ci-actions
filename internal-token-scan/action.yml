@@ -1,0 +1,58 @@
+name: 'Internal Token Scan'
+description: >-
+  Fails the job if any published text in the checked-out tree names something
+  only an insider can look up: an internal ticket or backlog id, a development
+  cycle number, a private working-document path, or an absolute local path.
+  Deliberately narrow -- only tokens a machine can judge without context.
+inputs:
+  path:
+    description: Directory to scan. Defaults to the workspace root.
+    required: false
+    default: '.'
+  extensions:
+    description: >-
+      Comma-separated file extensions to read (no leading dots).
+    required: false
+    default: 'cs,md,ts,py,csproj,props,slnx,yml,yaml,json,sh,ps1,toml,sql,graphql,xml,txt'
+  include-names:
+    description: >-
+      Comma-separated exact file names to read as well -- files that carry no
+      extension.
+    required: false
+    default: 'Dockerfile'
+  exclude-dirs:
+    description: >-
+      Comma-separated directory names pruned at any depth.
+    required: false
+    default: '.git,bin,obj,node_modules,dist,.venv,TestResults,coverage,claudedocs'
+  extra-patterns:
+    description: >-
+      Newline-separated extra PCRE patterns, appended to the built-in set.
+    required: false
+    default: ''
+  min-files:
+    description: >-
+      The scan must read more files than this, or it fails as not covering the
+      repository -- a scan that resolved the wrong root would read nothing and
+      pass forever.
+    required: false
+    default: '20'
+  must-contain:
+    description: >-
+      A file name that must be among the files read, for the same reason.
+    required: false
+    default: 'README.md'
+runs:
+  using: 'composite'
+  steps:
+    - name: Scan published text for internal-only tokens
+      shell: bash
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        SCAN_EXTENSIONS: ${{ inputs.extensions }}
+        SCAN_INCLUDE_NAMES: ${{ inputs.include-names }}
+        SCAN_EXCLUDE_DIRS: ${{ inputs.exclude-dirs }}
+        SCAN_EXTRA_PATTERNS: ${{ inputs.extra-patterns }}
+        SCAN_MIN_FILES: ${{ inputs.min-files }}
+        SCAN_MUST_CONTAIN: ${{ inputs.must-contain }}
+      run: bash "${{ github.action_path }}/scan.sh"
