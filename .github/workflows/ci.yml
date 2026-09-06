@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  internal-token-scan:
+    name: internal-token-scan behaves
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The script's own checks: planted tokens are reported, ordinary text passes, an unread tree
+      # is refused, list inputs switch off when empty.
+      - name: Run the fixture checks
+        run: bash internal-token-scan/test.sh
+
+      # The action as a consumer uses it, against the clean fixture, so a broken action.yml (a
+      # renamed input, a missing env mapping) fails here rather than in the first consumer's CI.
+      - name: Use the action on the clean fixture
+        uses: ./internal-token-scan
+        with:
+          path: internal-token-scan/fixtures/clean
+          min-files: '1'
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: shellcheck the scripts
+        run: shellcheck --severity=warning internal-token-scan/scan.sh internal-token-scan/test.sh

@@ -82,6 +82,10 @@ Runs from a shell too, for the same result the job would give:
 SCAN_PATH=. bash path/to/dotnet-ci-actions/internal-token-scan/scan.sh
 ```
 
+Its own checks live beside it -- `internal-token-scan/test.sh` runs the scan against the
+fixtures under `internal-token-scan/fixtures/` (one tree that must fail, one that must pass) and
+this repository's CI runs them on every push.
+
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `path` | no | `.` | Directory to scan. |
