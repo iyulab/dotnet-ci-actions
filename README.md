@@ -61,7 +61,7 @@ without context:
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: actions/checkout@v7
 
 - name: Internal token scan
   uses: iyulab/dotnet-ci-actions/internal-token-scan@<commit-sha>  # pin to a commit, not @main

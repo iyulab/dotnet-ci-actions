@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The script's own checks: planted tokens are reported, ordinary text passes, an unread tree
       # is refused, list inputs switch off when empty.
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: shellcheck the scripts
         run: shellcheck --severity=warning internal-token-scan/scan.sh internal-token-scan/test.sh
