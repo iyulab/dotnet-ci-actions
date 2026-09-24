@@ -1,0 +1,41 @@
+name: 'Package Consumer Check'
+description: >-
+  Packs the repository and checks the result from where a package consumer
+  sits: every packaged assembly carries its XML documentation, every package
+  declares a readme and a license, and every README snippet marked for
+  compilation compiles against exactly the packages the README tells readers
+  to install.
+inputs:
+  project:
+    description: >-
+      Solution or project file to pack. Left empty, dotnet finds the single
+      solution/project in the current directory.
+    required: false
+    default: ''
+  readme:
+    description: README whose marked snippets are compiled.
+    required: false
+    default: 'README.md'
+  require-xml-docs:
+    description: >-
+      'true' fails any packaged lib/<tfm>/<name>.dll without its
+      lib/<tfm>/<name>.xml.
+    required: false
+    default: 'true'
+  min-snippets:
+    description: >-
+      Fewer marked snippets than this fails the check, so a marker lost in an
+      edit does not turn the snippet check into a silent pass.
+    required: false
+    default: '0'
+runs:
+  using: 'composite'
+  steps:
+    - name: Check the packed packages as a consumer
+      shell: bash
+      env:
+        CHECK_PROJECT: ${{ inputs.project }}
+        CHECK_README: ${{ inputs.readme }}
+        CHECK_REQUIRE_XML_DOCS: ${{ inputs.require-xml-docs }}
+        CHECK_MIN_SNIPPETS: ${{ inputs.min-snippets }}
+      run: bash "${{ github.action_path }}/check.sh"

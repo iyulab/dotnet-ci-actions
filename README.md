@@ -95,3 +95,68 @@ this repository's CI runs them on every push.
 | `extra-patterns` | no | `''` | Newline-separated extra PCRE patterns appended to the built-in set. |
 | `min-files` | no | `20` | The scan must read more files than this. |
 | `must-contain` | no | `README.md` | A file name that must be among the files read. |
+
+### `package-consumer-check`
+
+Packs the repository and looks at the result from where a package consumer
+sits — two things no build of the repository itself can see:
+
+- **What is in each package.** Every packaged `lib/<tfm>/<name>.dll` must carry
+  `lib/<tfm>/<name>.xml` beside it (the API documentation an IDE shows; it is
+  only packed when `GenerateDocumentationFile` is on), and every package must
+  declare a readme it actually contains and a license.
+- **Whether the README's code compiles for a reader.** A solution builds its
+  README examples against nothing, and its own tests reference packages the
+  reader was never told to add, so a quick start can stop compiling while every
+  build stays green. Mark each complete-program snippet with a comment on the
+  line before its fence — invisible on a rendered README:
+
+  ````markdown
+  <!-- snippet: compile packages="Acme.Core Acme.DependencyInjection Microsoft.Extensions.DependencyInjection" -->
+  ```csharp
+  var services = new ServiceCollection();
+  ...
+  ```
+  ````
+
+  Each marked snippet is compiled as `Program.cs` of a fresh console project
+  referencing exactly the packages its marker names. Every one of them must
+  also appear in a `dotnet add package` line of the same README — what compiles
+  is what the reader was told to install. Packages this repository packs are
+  referenced at the version just packed (a unique pre-release number, so the
+  check runs before anything is published); any other package at the
+  `--version` its install line gives, or the latest stable one when the line
+  gives none. Unmarked fences (fragments) are not compiled.
+
+```yaml
+- name: Setup .NET
+  uses: actions/setup-dotnet@v6
+  with:
+    dotnet-version: 10.0.x
+
+- name: Package consumer check
+  uses: iyulab/dotnet-ci-actions/package-consumer-check@<commit-sha>  # pin to a commit, not @main
+  with:
+    project: MySolution.slnx
+    min-snippets: '1'
+```
+
+**Requires**: `dotnet` on `PATH`, `unzip`/`zipinfo` (present on `ubuntu-latest`)
+and network access to nuget.org for packages the repository does not pack.
+
+Runs from a shell too, for the same result the job would give:
+
+```bash
+CHECK_MIN_SNIPPETS=1 bash path/to/dotnet-ci-actions/package-consumer-check/check.sh
+```
+
+Its own checks live beside it — `package-consumer-check/test.sh` packs and
+builds the fixtures under `package-consumer-check/fixtures/` (one library that
+must pass, one carrying every defect the check reports).
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `project` | no | `''` | Solution or project file to pack. Left empty, `dotnet` finds the single one in the current directory. |
+| `readme` | no | `README.md` | README whose marked snippets are compiled. |
+| `require-xml-docs` | no | `true` | `'true'` fails any packaged assembly without its XML documentation. |
+| `min-snippets` | no | `0` | Fewer marked snippets than this fails, so a marker lost in an edit does not turn the snippet check into a silent pass. |
