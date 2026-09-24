@@ -40,7 +40,17 @@ mkdir -p "$feed"
 version="0.0.0-consumer-check.$(date +%s)"
 
 echo "Packing ${project:-the project in $(pwd)} as $version ..."
-if ! pack_out="$(dotnet pack ${project:+"$project"} -c Release -o "$feed" -p:Version="$version" --nologo 2>&1)"; then
+# Build first, then pack what was built -- the two steps a release workflow takes. One `dotnet pack`
+# over a solution builds and packs in a single parallel pass, and on a Linux runner a pack target can
+# look for a library's assembly while a project that references it is still rebuilding it (NU5026,
+# "to be packed was not found on disk"). Separate steps also pack the checked packages the way the
+# published ones are packed.
+if ! build_out="$(dotnet build ${project:+"$project"} -c Release -p:Version="$version" --nologo 2>&1)"; then
+  printf '%s\n' "$build_out" | grep -E 'error|Error' | head -20
+  echo "FAIL: dotnet build failed"
+  exit 1
+fi
+if ! pack_out="$(dotnet pack ${project:+"$project"} -c Release --no-build -o "$feed" -p:Version="$version" --nologo 2>&1)"; then
   printf '%s\n' "$pack_out" | grep -E 'error|Error' | head -20
   echo "FAIL: dotnet pack failed"
   exit 1
