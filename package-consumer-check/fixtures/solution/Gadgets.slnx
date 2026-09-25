@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Gadgets.Core/Gadgets.Core.csproj" />
+    <Project Path="src/Gadgets/Gadgets.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Gadgets.Tests/Gadgets.Tests.csproj" />
+  </Folder>
+</Solution>

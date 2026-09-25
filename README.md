@@ -152,7 +152,8 @@ CHECK_MIN_SNIPPETS=1 bash path/to/dotnet-ci-actions/package-consumer-check/check
 
 Its own checks live beside it — `package-consumer-check/test.sh` packs and
 builds the fixtures under `package-consumer-check/fixtures/` (one library that
-must pass, one carrying every defect the check reports).
+must pass, a solution whose library packs on build, one carrying every defect the
+check reports), each from a copy without `bin/` and `obj/`, as a CI checkout has none.
 
 | Input | Required | Default | Description |
 |---|---|---|---|

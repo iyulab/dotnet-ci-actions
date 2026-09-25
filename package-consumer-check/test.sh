@@ -7,12 +7,22 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 check="$here/check.sh"
 failures=0
 
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+
 # run <expected exit code> <description> <fixture> [VAR=value ...]
-# Runs the check inside the fixture with the given environment and leaves the output in $out.
+# Runs the check inside a fresh copy of the fixture with the given environment and leaves the output
+# in $out. The copy leaves out bin/ and obj/: CI checks out a clean tree, and a check that passes only
+# because an earlier build left an assembly on disk is the failure the solution fixture pins.
 run() {
   local expected="$1" what="$2" fixture="$3"; shift 3
+  local copy="$scratch/$fixture"
+  rm -rf "$copy"
+  mkdir -p "$copy"
+  (cd "$here/fixtures/$fixture" && find . \( -name bin -o -name obj \) -prune -o -type f -print |
+    while IFS= read -r file; do mkdir -p "$copy/$(dirname "$file")" && cp "$file" "$copy/$file"; done)
   set +e
-  out="$(cd "$here/fixtures/$fixture" && env "$@" bash "$check" 2>&1)"
+  out="$(cd "$copy" && env "$@" bash "$check" 2>&1)"
   local status=$?
   set -e
   if [ "$status" -ne "$expected" ]; then
@@ -36,6 +46,38 @@ expect() {
 run 0 "a documented package whose marked snippet compiles passes" good CHECK_MIN_SNIPPETS=1 || true
 expect "ok: README.md:7 compiles with: Fixture.Widgets" "the marked snippet is built"
 expect "found 1 marked snippet(s)" "the unmarked fragment is not collected"
+
+# expect_line <line> <description>: the last run's output must contain exactly this line.
+expect_line() {
+  if ! printf '%s
+' "$out" | grep -qxF -- "$1"; then
+    echo "FAIL: $2 -- output has no line: $1"
+    printf '%s
+' "$out" | sed 's/^/    /'
+    failures=$((failures + 1))
+  fi
+}
+
+# reject <needle> <description>: the last run's output must not contain the needle.
+reject() {
+  if printf '%s
+' "$out" | grep -qF -- "$1"; then
+    echo "FAIL: $2 -- output mentions: $1"
+    printf '%s
+' "$out" | sed 's/^/    /'
+    failures=$((failures + 1))
+  fi
+}
+
+# A library that packs on build (GeneratePackageOnBuild), in a solution with a library it references
+# and a test project that is not packed, from a clean tree: one `dotnet pack` pass over it fails with
+# NU5026 (the assembly "to be packed was not found on disk"); building first and packing what was
+# built does not.
+run 0 "a solution whose library packs on build is packed from a clean tree" solution CHECK_MIN_SNIPPETS=1 || true
+expect "checked package Fixture.Gadgets.Core" "the referenced library is packed"
+expect_line "checked package Fixture.Gadgets" "the library that packs on build is packed"
+reject "Gadgets.Tests" "the test project is not packed"
+expect "compiles with: Fixture.Gadgets Fixture.Gadgets.Core" "the snippet compiles against both packages"
 
 run 1 "a lost marker is caught by the minimum" good CHECK_MIN_SNIPPETS=2 || true
 expect "at least 2 required" "the minimum names itself"

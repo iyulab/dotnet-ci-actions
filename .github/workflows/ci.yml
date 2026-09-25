@@ -43,7 +43,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # Packs and builds both fixtures for real: the passing library, and the one carrying every
+      # Packs and builds the fixtures for real: the passing library, a solution whose library packs on
+      # build (checked from a clean copy, as CI sees it), and the library carrying every
       # defect the check reports (missing XML docs / readme / license, a snippet that does not
       # compile, a package nobody was told to install, a marker without a fence).
       - name: Run the fixture checks
