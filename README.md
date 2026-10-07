@@ -161,3 +161,40 @@ check reports), each from a copy without `bin/` and `obj/`, as a CI checkout has
 | `readme` | no | `README.md` | README whose marked snippets are compiled. |
 | `require-xml-docs` | no | `true` | `'true'` fails any packaged assembly without its XML documentation. |
 | `min-snippets` | no | `0` | Fewer marked snippets than this fails, so a marker lost in an edit does not turn the snippet check into a silent pass. |
+
+### `nuget-unpublished`
+
+Says whether a release still has something to publish: given the version the
+packages were packed at, it asks nuget.org about **every** packed `.nupkg` and
+outputs `any` — `true` when at least one is not there yet. Asking about every
+package (not one sentinel) means a release that pushed some packages and then
+failed is finished by the next run. It fails closed: an answer from nuget.org
+other than the package's version list or "no such package" fails the step
+rather than reading as "not published". A release workflow that runs on every
+green CI uses it to stop when the version is already out.
+
+```yaml
+- name: Pack
+  run: dotnet pack --no-build -c Release -o ./nupkgs /p:PackageVersion=${{ steps.version.outputs.version }}
+
+- name: Find the packages nuget.org does not have yet
+  id: unpublished
+  uses: iyulab/dotnet-ci-actions/nuget-unpublished@<commit-sha>  # pin to a commit, not @main
+  with:
+    version: ${{ steps.version.outputs.version }}
+
+- name: Push to NuGet.org
+  if: steps.unpublished.outputs.any == 'true'
+  run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+```
+
+**Requires**: `curl` and `jq` on the runner (both on `ubuntu-latest`).
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `version` | yes | — | The version the packages were packed at. A `.nupkg` at another version fails the step. |
+| `packages` | no | `./nupkgs` | Directory holding the packed `.nupkg` files (`.snupkg` are ignored). Empty fails the step. |
+
+| Output | Description |
+|---|---|
+| `any` | `'true'` when at least one package is not on nuget.org at that version, else `'false'`. |

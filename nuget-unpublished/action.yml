@@ -1,0 +1,27 @@
+name: 'NuGet Unpublished'
+description: >-
+  Says whether any packed .nupkg is missing from nuget.org at the given version
+  (output `any`), asking about every package so a partial release is finished
+  by the next run. Fails closed when nuget.org cannot be asked.
+inputs:
+  version:
+    description: The version the packages were packed at.
+    required: true
+  packages:
+    description: Directory holding the packed .nupkg files.
+    required: false
+    default: './nupkgs'
+outputs:
+  any:
+    description: "'true' when at least one package is not on nuget.org at that version, else 'false'."
+    value: ${{ steps.check.outputs.any }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Find the packages nuget.org does not have yet
+      id: check
+      shell: bash
+      env:
+        NU_VERSION: ${{ inputs.version }}
+        NU_PACKAGES: ${{ inputs.packages }}
+      run: bash "${{ github.action_path }}/check.sh"

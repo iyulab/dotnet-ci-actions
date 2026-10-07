@@ -31,6 +31,34 @@ jobs:
           path: internal-token-scan/fixtures/clean
           min-files: '1'
 
+  nuget-unpublished:
+    name: nuget-unpublished behaves
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Against a stand-in index: all published, one of two missing, never published, an index that
+      # cannot be asked, nothing packed, a package at another version.
+      - name: Run the stand-in checks
+        run: bash nuget-unpublished/test.sh
+
+      # The action as a consumer uses it, against nuget.org itself, for a package version that is
+      # certainly published -- a broken action.yml or a changed index answer fails here first.
+      - name: Stand in a packed package that nuget.org has
+        run: mkdir -p "$RUNNER_TEMP/p" && touch "$RUNNER_TEMP/p/Newtonsoft.Json.13.0.1.nupkg"
+
+      - name: Use the action against nuget.org
+        id: published
+        uses: ./nuget-unpublished
+        with:
+          version: 13.0.1
+          packages: ${{ runner.temp }}/p
+
+      - name: It reads as published
+        run: test "${{ steps.published.outputs.any }}" = false
+
   package-consumer-check:
     name: package-consumer-check behaves
     runs-on: ubuntu-latest
