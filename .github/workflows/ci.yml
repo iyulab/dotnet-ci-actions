@@ -94,4 +94,6 @@ jobs:
         uses: actions/checkout@v7
 
       - name: shellcheck the scripts
-        run: shellcheck --severity=warning internal-token-scan/scan.sh internal-token-scan/test.sh package-consumer-check/check.sh package-consumer-check/test.sh
+        # Every script in the repository, found rather than listed: a hand-kept list had already left
+        # the nuget-unpublished scripts out.
+        run: find . -name '*.sh' -not -path './.git/*' -print0 | sort -z | xargs -0 shellcheck --severity=warning
