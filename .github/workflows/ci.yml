@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# The jobs only check out and exercise the actions in this repository; nothing writes to it.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
