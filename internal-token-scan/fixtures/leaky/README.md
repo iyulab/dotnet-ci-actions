@@ -10,5 +10,7 @@ report each of them and exit 1.
 - See claudedocs for the design note.
 - Documented in ISSUE-sample-20260101-something.md.
 - Path on a workstation: C:\work\repo\file.txt
+- Same path with forward slashes: D:/data/lib
+- Same path in a quoted string: Exists('E:/pkgs')
 - Path on a workstation: /home/someone/repo
 - Path on a workstation: /Users/Someone/repo

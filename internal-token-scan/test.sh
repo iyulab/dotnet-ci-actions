@@ -52,6 +52,8 @@ if run 1 "leaky fixture fails" SCAN_PATH="$here/fixtures/leaky" SCAN_MIN_FILES=1
   expect "README.md:6:" "the planted ticket line is located by line"
   expect "notes.py:1:" "a Python file is read"
   expect_count "README.md:12:" 1 "the drive-letter path is reported once"
+  expect "README.md:13:" "a drive path written with forward slashes is reported"
+  expect "README.md:14:" "a forward-slash drive path inside a quoted string is reported"
 fi
 
 # 2. Ordinary published text passes.

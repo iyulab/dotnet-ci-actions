@@ -36,7 +36,10 @@ declare -a labels patterns
 labels+=("internal ticket or backlog id");   patterns+=('\b(HD-\d+|P\d+-[a-z]\b|BD-\d{8}-\d+)')
 labels+=("internal cycle number");           patterns+=('\bcycle-\d+\b')
 labels+=("internal working document");       patterns+=('\bclaudedocs\b|\bISSUE-[A-Za-z0-9][A-Za-z0-9-]*\.md\b')
-labels+=("absolute local path");             patterns+=('(?<![A-Za-z0-9])[A-Za-z]:\\|/home/[a-z]|/Users/[A-Za-z]')
+# A drive path with either slash (`D:\lib`, `D:/lib`; a doubled backslash from an escaped string too), except
+# the system roots every Windows runner has -- they name no one's workstation. `X:/` followed by another
+# slash is a URL scheme, and the lookbehind keeps `Xc:\` inside an identifier out.
+labels+=("absolute local path");             patterns+=('(?<![A-Za-z0-9])[A-Za-z]:(?:\\{1,2}+|/(?!/))(?!Program Files(?: \(x86\))?[\\/]|Windows[\\/])|/home/[a-z]|/Users/[A-Za-z]')
 
 if [ -n "$extra_patterns" ]; then
   while IFS= read -r line; do

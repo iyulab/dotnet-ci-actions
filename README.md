@@ -57,7 +57,11 @@ without context:
 | internal ticket or backlog id | `\b(HD-\d+\|P\d+-[a-z]\b\|BD-\d{8}-\d+)` |
 | internal cycle number | `\bcycle-\d+\b` |
 | internal working document | `\bclaudedocs\b\|\bISSUE-[A-Za-z0-9][A-Za-z0-9-]*\.md\b` |
-| absolute local path | `(?<![A-Za-z0-9])[A-Za-z]:\\\|/home/[a-z]\|/Users/[A-Za-z]` |
+| absolute local path | `(?<![A-Za-z0-9])[A-Za-z]:(?:\\{1,2}+\|/(?!/))(?!Program Files(?: \(x86\))?[\\/]\|Windows[\\/])\|/home/[a-z]\|/Users/[A-Za-z]` |
+
+A drive path is reported with either slash (`D:\lib`, `D:/lib`). The system roots every Windows runner has --
+`Program Files`, `Program Files (x86)` and `Windows` -- are not reported, since they name no one's
+workstation; `https://...`, `file:///...` and `key:/v` are not drive paths.
 
 ```yaml
 - name: Checkout
