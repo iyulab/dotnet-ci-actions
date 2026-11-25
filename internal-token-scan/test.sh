@@ -84,6 +84,81 @@ run 1 "extra pattern is applied" \
   SCAN_PATH="$here/fixtures/clean" SCAN_MIN_FILES=1 SCAN_EXTRA_PATTERNS='example\.org' || true
 expect "extra pattern: example\\.org" "extra pattern labelled"
 
+# 6. An allowance exempts one rule in one named file, and nothing else.
+tree="$here/fixtures/allowed"
+all_allowed='local-path tests/Path Tests.cs
+cycle-number tests/Path Tests.cs
+local-path tests/data.json'
+
+run 1 "without an allowance the tree fails" SCAN_PATH="$tree" SCAN_MIN_FILES=1 || true
+expect "Path Tests.cs:6:" "the path is reported without an allowance"
+
+if run 0 "every token allowed by file and rule passes" \
+  SCAN_PATH="$tree" SCAN_MIN_FILES=1 SCAN_ALLOW="$all_allowed"; then
+  expect "Allowed 1 match(es): local-path tests/Path Tests.cs" "each use of an allowance is shown"
+  expect "Allowed 1 match(es): local-path tests/data.json" "a file that cannot carry a comment is allowed"
+fi
+
+if run 1 "an allowance for one rule leaves the file's other tokens reported" \
+  SCAN_PATH="$tree" SCAN_MIN_FILES=1 SCAN_ALLOW='local-path tests/Path Tests.cs
+local-path tests/data.json'; then
+  expect "Path Tests.cs:7:cycle-42" "another rule in an allowed file is still reported"
+  expect_count "Path Tests.cs:6:" 0 "the allowed rule is not reported"
+fi
+
+# The same string in a file nobody listed still fails -- also one that only shares the listed
+# file's name.
+copy="$(mktemp -d)"
+cp -R "$tree/." "$copy"
+mkdir -p "$copy/src/tests"
+cp "$copy/tests/data.json" "$copy/src/tests/data.json"
+if run 1 "the same string in an unlisted file still fails" \
+  SCAN_PATH="$copy" SCAN_MIN_FILES=1 SCAN_ALLOW="$all_allowed"; then
+  expect "src/tests/data.json:1:/home/s" "the unlisted file is reported"
+  expect_count "$copy/tests/data.json:1:" 0 "the listed file stays allowed"
+fi
+rm -rf "$copy"
+
+# An allowance that exempts nothing is a leftover or a typo, and a wildcard matches no file name.
+run 1 "an allowance that exempts nothing fails" \
+  SCAN_PATH="$tree" SCAN_MIN_FILES=1 SCAN_ALLOW="$all_allowed
+ticket-id tests/data.json" || true
+expect "'ticket-id tests/data.json' exempts nothing" "the unused entry is named"
+
+run 1 "a wildcard is not a pattern" \
+  SCAN_PATH="$tree" SCAN_MIN_FILES=1 SCAN_ALLOW='local-path tests/*' || true
+expect "'local-path tests/*' exempts nothing" "the wildcard entry is named"
+expect "tests/data.json:1:" "nothing is exempted by a wildcard"
+
+run 2 "an unknown rule is refused" \
+  SCAN_PATH="$tree" SCAN_MIN_FILES=1 SCAN_ALLOW='paths tests/data.json' || true
+expect "unknown rule 'paths'" "the unknown rule is named"
+run 2 "an entry without a file is refused" \
+  SCAN_PATH="$tree" SCAN_MIN_FILES=1 SCAN_ALLOW='local-path' || true
+
+# The file is named relative to the scanned root, however the root is written; comment and blank
+# lines are for the reader.
+commented="# the path suite is handed drive paths on purpose
+
+  $all_allowed"
+run 0 "a root with a trailing slash, comments and blank lines" \
+  SCAN_PATH="$tree/" SCAN_MIN_FILES=1 SCAN_ALLOW="$commented" || true
+if (cd "$tree" && SCAN_PATH=. SCAN_MIN_FILES=1 SCAN_ALLOW="$all_allowed" bash "$scan" >/dev/null 2>&1); then
+  echo "ok: a root of '.' (exit 0)"
+else
+  echo "FAIL: a root of '.' -- the allowance did not apply"
+  failures=$((failures + 1))
+fi
+run 0 "an entry may start with ./ and end in a carriage return" \
+  SCAN_PATH="$tree" SCAN_MIN_FILES=1 SCAN_ALLOW="local-path ./tests/Path Tests.cs$(printf '\r')
+cycle-number tests/Path Tests.cs
+local-path tests/data.json" || true
+
+# An extra pattern is allowed by its position among the extra patterns.
+run 0 "an extra pattern can be allowed" \
+  SCAN_PATH="$here/fixtures/clean" SCAN_MIN_FILES=1 SCAN_EXTRA_PATTERNS='no-such-token-here
+example\.org' SCAN_ALLOW='extra-2 README.md' || true
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures check(s) failed."
   exit 1

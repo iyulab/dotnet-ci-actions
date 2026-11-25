@@ -35,6 +35,19 @@ jobs:
           path: internal-token-scan/fixtures/clean
           min-files: '1'
 
+      # The same with an allowance, so a lost 'allow' mapping fails here too: this tree passes
+      # only when every entry reaches the script.
+      - name: Use the action with allowances
+        uses: ./internal-token-scan
+        with:
+          path: internal-token-scan/fixtures/allowed
+          min-files: '1'
+          allow: |
+            # tests about drive paths are handed drive paths
+            local-path tests/Path Tests.cs
+            cycle-number tests/Path Tests.cs
+            local-path tests/data.json
+
   nuget-unpublished:
     name: nuget-unpublished behaves
     runs-on: ubuntu-latest

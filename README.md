@@ -52,12 +52,12 @@ and every review that reads the change for correctness slides straight past it.
 The built-in patterns are deliberately narrow -- only tokens a machine can judge
 without context:
 
-| What | Pattern |
-|---|---|
-| internal ticket or backlog id | `\b(HD-\d+\|P\d+-[a-z]\b\|BD-\d{8}-\d+)` |
-| internal cycle number | `\bcycle-\d+\b` |
-| internal working document | `\bclaudedocs\b\|\bISSUE-[A-Za-z0-9][A-Za-z0-9-]*\.md\b` |
-| absolute local path | `(?<![A-Za-z0-9])[A-Za-z]:(?:\\{1,2}+\|/(?!/))(?!Program Files(?: \(x86\))?[\\/]\|Windows[\\/])\|/home/[a-z]\|/Users/[A-Za-z]` |
+| What | Rule | Pattern |
+|---|---|---|
+| internal ticket or backlog id | `ticket-id` | `\b(HD-\d+\|P\d+-[a-z]\b\|BD-\d{8}-\d+)` |
+| internal cycle number | `cycle-number` | `\bcycle-\d+\b` |
+| internal working document | `working-document` | `\bclaudedocs\b\|\bISSUE-[A-Za-z0-9][A-Za-z0-9-]*\.md\b` |
+| absolute local path | `local-path` | `(?<![A-Za-z0-9])[A-Za-z]:(?:\\{1,2}+\|/(?!/))(?!Program Files(?: \(x86\))?[\\/]\|Windows[\\/])\|/home/[a-z]\|/Users/[A-Za-z]` |
 
 A drive path is reported with either slash (`D:\lib`, `D:/lib`). The system roots every Windows runner has --
 `Program Files`, `Program Files (x86)` and `Windows` -- are not reported, since they name no one's
@@ -70,6 +70,25 @@ workstation; `https://...`, `file:///...` and `key:/v` are not drive paths.
 - name: Internal token scan
   uses: iyulab/dotnet-ci-actions/internal-token-scan@<commit-sha>  # pin to a commit, not @main
 ```
+
+Some files have to carry such a string: a test about drive paths is handed one, and a guard against a
+token has to spell it. Allow exactly that -- one rule in one file -- instead of dropping a directory from
+the scan, which stops reading everything else in it:
+
+```yaml
+- name: Internal token scan
+  uses: iyulab/dotnet-ci-actions/internal-token-scan@<commit-sha>  # pin to a commit, not @main
+  with:
+    allow: |
+      # path handling tests are handed drive paths
+      local-path tests/Sample.Tests/PathTests.cs
+```
+
+Each entry is `<rule> <file>`. The file is relative to `path` and compared as written -- there are no
+wildcards, and a file of the same name elsewhere is not covered. Every other rule still applies to an
+allowed file. The log shows how many matches each entry let through, and an entry that lets none through
+fails the scan, so a renamed file or a removed string does not leave an allowance behind. The rule of an
+`extra-patterns` line is `extra-1`, `extra-2`, ... by its position among them.
 
 The scan refuses to pass on an empty corpus: it must read more than `min-files`
 files and must have read `must-contain`, or it fails as not covering the
@@ -87,8 +106,8 @@ SCAN_PATH=. bash path/to/dotnet-ci-actions/internal-token-scan/scan.sh
 ```
 
 Its own checks live beside it -- `internal-token-scan/test.sh` runs the scan against the
-fixtures under `internal-token-scan/fixtures/` (one tree that must fail, one that must pass) and
-this repository's CI runs them on every push.
+fixtures under `internal-token-scan/fixtures/` (one tree that must fail, one that must pass, one that
+passes only with its allowances) and this repository's CI runs them on every push.
 
 | Input | Required | Default | Description |
 |---|---|---|---|
@@ -97,6 +116,7 @@ this repository's CI runs them on every push.
 | `include-names` | no | `Dockerfile` | Comma-separated exact file names to read as well (files with no extension). Ignore files (`.gitignore`, `.dockerignore`) are deliberately not read: naming a private directory there is how it stays private. |
 | `exclude-dirs` | no | `.git,bin,obj,node_modules,dist,.venv,TestResults,coverage,claudedocs` | Comma-separated directory names pruned at any depth. |
 | `extra-patterns` | no | `''` | Newline-separated extra PCRE patterns appended to the built-in set. |
+| `allow` | no | `''` | Newline-separated `<rule> <file>` allowances (see above). An unknown rule stops the scan; an entry that exempts nothing fails it. |
 | `min-files` | no | `20` | The scan must read more files than this. |
 | `must-contain` | no | `README.md` | A file name that must be among the files read. |
 

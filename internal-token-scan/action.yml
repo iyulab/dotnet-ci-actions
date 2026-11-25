@@ -30,6 +30,15 @@ inputs:
       Newline-separated extra PCRE patterns, appended to the built-in set.
     required: false
     default: ''
+  allow:
+    description: >-
+      Newline-separated allowances, each '<rule> <file>': matches of that one rule in that one
+      file do not fail the scan. The file is relative to 'path' and compared as written (no
+      wildcards); lines starting with '#' are comments. Rules: ticket-id, cycle-number,
+      working-document, local-path, and extra-1, extra-2, ... for 'extra-patterns' in order.
+      An allowance that exempts nothing fails the scan.
+    required: false
+    default: ''
   min-files:
     description: >-
       The scan must read more files than this, or it fails as not covering the
@@ -53,6 +62,7 @@ runs:
         SCAN_INCLUDE_NAMES: ${{ inputs.include-names }}
         SCAN_EXCLUDE_DIRS: ${{ inputs.exclude-dirs }}
         SCAN_EXTRA_PATTERNS: ${{ inputs.extra-patterns }}
+        SCAN_ALLOW: ${{ inputs.allow }}
         SCAN_MIN_FILES: ${{ inputs.min-files }}
         SCAN_MUST_CONTAIN: ${{ inputs.must-contain }}
       run: bash "${{ github.action_path }}/scan.sh"
