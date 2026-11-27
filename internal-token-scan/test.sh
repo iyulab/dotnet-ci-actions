@@ -25,7 +25,7 @@ run() {
 
 # expect <needle> <description>: the last run's output must contain the needle.
 expect() {
-  if ! printf '%s\n' "$out" | grep -qF -- "$1"; then
+  if ! grep -qF -- "$1" <<< "$out"; then
     echo "FAIL: $2 -- output does not mention: $1"
     printf '%s\n' "$out" | sed 's/^/    /'
     failures=$((failures + 1))
@@ -68,6 +68,31 @@ rmdir "$empty"
 run 1 "missing must-contain file is rejected" \
   SCAN_PATH="$here/fixtures/clean" SCAN_MIN_FILES=1 SCAN_MUST_CONTAIN=CHANGELOG.md || true
 expect "did not read 'CHANGELOG.md'" "missing file named"
+
+# A listing far larger than a pipe buffer, with the required file near its start: every directory
+# holds one, so the first match comes early whatever order the file system lists them in. A check
+# that stops reading at the first match must not turn into a failure.
+large="$(mktemp -d)"
+pad="a-file-name-long-enough-to-make-the-listing-of-this-tree-large"
+for d in $(seq 1 40); do
+  mkdir "$large/dir-$d"
+  echo text > "$large/dir-$d/REQUIRED.md"
+  for f in $(seq 1 100); do echo text > "$large/dir-$d/$pad-$f.md"; done
+done
+for attempt in 1 2 3 4 5; do
+  run 0 "a large tree whose required file is listed early passes (attempt $attempt)" \
+    SCAN_PATH="$large" SCAN_MUST_CONTAIN=REQUIRED.md || true
+done
+rm -rf "$large"
+
+# The required name is compared as written: a '.' in it does not stand for any character.
+similar="$(mktemp -d)"
+echo text > "$similar/abc.md"
+run 1 "a file that only resembles must-contain does not count" \
+  SCAN_PATH="$similar" SCAN_MIN_FILES=0 SCAN_MUST_CONTAIN=a.c.md || true
+expect "did not read 'a.c.md'" "the required name is reported as missing"
+run 0 "the exact name counts" SCAN_PATH="$similar" SCAN_MIN_FILES=0 SCAN_MUST_CONTAIN=abc.md || true
+rm -rf "$similar"
 
 # 4. Lists switch off when explicitly empty, and both empty is refused. With the extension list
 # empty only the named file is read -- and notes.py carries a cycle number, so the run fails for

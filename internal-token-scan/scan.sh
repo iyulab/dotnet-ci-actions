@@ -31,7 +31,10 @@ allow="${SCAN_ALLOW-}"
 min_files="${SCAN_MIN_FILES:-20}"
 must_contain="${SCAN_MUST_CONTAIN:-README.md}"
 
-if ! grep --version 2>/dev/null | grep -q 'GNU grep'; then
+# No check in this script feeds a reader that stops at its first match (grep -q) through a pipe:
+# under 'pipefail' the writer's broken pipe then makes a match read as a failure, depending on how
+# much was still to be written.
+if [[ "$(grep --version 2>/dev/null)" != *'GNU grep'* ]]; then
   echo "::error::this scan needs GNU grep (for -P); the grep on PATH is not GNU grep."
   exit 2
 fi
@@ -114,7 +117,10 @@ if [ "$corpus_count" -le "$min_files" ]; then
   echo "::error::the scan read $corpus_count files under '$root' (needs more than $min_files) -- it is not covering the repository."
   exit 1
 fi
-if ! printf '%s\n' "$corpus" | grep -q -- "/${must_contain}\$"; then
+# The name is compared as written (not as a pattern) with the end of each listed path.
+if ! WANT="/$must_contain" awk 'BEGIN { want = ENVIRON["WANT"]; size = length(want) }
+    substr($0, length($0) - size + 1) == want { found = 1 }
+    END { exit !found }' <<< "$corpus"; then
   echo "::error::the scan did not read '$must_contain' under '$root' -- it is not covering the repository."
   exit 1
 fi

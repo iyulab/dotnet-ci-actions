@@ -41,7 +41,7 @@ run() {
   out="$(PATH="$work/bin:$PATH" FAKE_INDEX="$work/index" NU_VERSION="$VERSION" NU_PACKAGES="$work/p" GITHUB_OUTPUT='' bash "$check" 2>&1)"
   local status=$?
   set -e
-  if [ "$status" -ne "$expected" ] || { [ "$any" != - ] && ! printf '%s\n' "$out" | grep -qx "any=$any"; }; then
+  if [ "$status" -ne "$expected" ] || { [ "$any" != - ] && ! grep -qx "any=$any" <<< "$out"; }; then
     echo "FAIL: $what -- expected exit $expected and any=$any, got exit $status"
     printf '%s\n' "$out" | sed 's/^/    /'
     failures=$((failures + 1))

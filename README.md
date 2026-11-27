@@ -118,7 +118,7 @@ passes only with its allowances) and this repository's CI runs them on every pus
 | `extra-patterns` | no | `''` | Newline-separated extra PCRE patterns appended to the built-in set. |
 | `allow` | no | `''` | Newline-separated `<rule> <file>` allowances (see above). An unknown rule stops the scan; an entry that exempts nothing fails it. |
 | `min-files` | no | `20` | The scan must read more files than this. |
-| `must-contain` | no | `README.md` | A file name that must be among the files read. |
+| `must-contain` | no | `README.md` | A file name that must be among the files read, compared as written (not as a pattern). |
 
 ### `package-consumer-check`
 

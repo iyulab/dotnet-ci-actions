@@ -110,6 +110,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Under 'pipefail', a reader that stops at its first match breaks the writer's pipe, and the
+      # match then reads as a failure -- or, behind a bare 'if', as no match. It depends on how much
+      # is still to be written, so no small fixture shows it. shellcheck has no rule for it.
+      - name: No pipe ends in a reader that stops early
+        run: |
+          if grep -rnE --include='*.sh' --include='action.yml' '\|[[:space:]]*grep([[:space:]]+-[A-Za-z]+)*[[:space:]]+(-[A-Za-z]*q|--quiet)' .; then
+            echo "::error::feed 'grep -q' from a file or a here-string, not from a pipe."
+            exit 1
+          fi
+
       - name: shellcheck the scripts
         # Every script in the repository, found rather than listed: a hand-kept list had already left
         # the nuget-unpublished scripts out.

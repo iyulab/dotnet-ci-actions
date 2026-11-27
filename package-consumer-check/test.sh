@@ -36,7 +36,7 @@ run() {
 
 # expect <needle> <description>: the last run's output must contain the needle.
 expect() {
-  if ! printf '%s\n' "$out" | grep -qF -- "$1"; then
+  if ! grep -qF -- "$1" <<< "$out"; then
     echo "FAIL: $2 -- output does not mention: $1"
     printf '%s\n' "$out" | sed 's/^/    /'
     failures=$((failures + 1))
@@ -49,8 +49,7 @@ expect "found 1 marked snippet(s)" "the unmarked fragment is not collected"
 
 # expect_line <line> <description>: the last run's output must contain exactly this line.
 expect_line() {
-  if ! printf '%s
-' "$out" | grep -qxF -- "$1"; then
+  if ! grep -qxF -- "$1" <<< "$out"; then
     echo "FAIL: $2 -- output has no line: $1"
     printf '%s
 ' "$out" | sed 's/^/    /'
@@ -60,8 +59,7 @@ expect_line() {
 
 # reject <needle> <description>: the last run's output must not contain the needle.
 reject() {
-  if printf '%s
-' "$out" | grep -qF -- "$1"; then
+  if grep -qF -- "$1" <<< "$out"; then
     echo "FAIL: $2 -- output mentions: $1"
     printf '%s
 ' "$out" | sed 's/^/    /'

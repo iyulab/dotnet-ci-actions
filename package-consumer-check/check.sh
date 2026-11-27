@@ -46,12 +46,12 @@ echo "Packing ${project:-the project in $(pwd)} as $version ..."
 # earlier build left that assembly in bin/, which is why it passed locally and failed in CI. Separate
 # steps also pack the checked packages the way the published ones are packed.
 if ! build_out="$(dotnet build ${project:+"$project"} -c Release -p:Version="$version" --nologo 2>&1)"; then
-  printf '%s\n' "$build_out" | grep -E 'error|Error' | head -20
+  printf '%s\n' "$build_out" | grep -E 'error|Error' | sed -n '1,20p'
   echo "FAIL: dotnet build failed"
   exit 1
 fi
 if ! pack_out="$(dotnet pack ${project:+"$project"} -c Release --no-build -o "$feed" -p:Version="$version" --nologo 2>&1)"; then
-  printf '%s\n' "$pack_out" | grep -E 'error|Error' | head -20
+  printf '%s\n' "$pack_out" | grep -E 'error|Error' | sed -n '1,20p'
   echo "FAIL: dotnet pack failed"
   exit 1
 fi
@@ -76,7 +76,7 @@ for nupkg in "${packages[@]}"; do
   while IFS= read -r dll; do
     [ -n "$dll" ] || continue
     tfms+=("$(printf '%s\n' "$dll" | cut -d/ -f2)")
-    if [ "$require_xml" = "true" ] && ! printf '%s\n' "$entries" | grep -qxF -- "${dll%.dll}.xml"; then
+    if [ "$require_xml" = "true" ] && ! grep -qxF -- "${dll%.dll}.xml" <<< "$entries"; then
       fail "$id: $dll has no ${dll%.dll}.xml beside it -- the API documentation is not in the package (GenerateDocumentationFile)"
     fi
   done <<< "$dlls"
@@ -84,11 +84,11 @@ for nupkg in "${packages[@]}"; do
   readme_entry="$(printf '%s\n' "$nuspec" | sed -n 's:.*<readme>\(.*\)</readme>.*:\1:p' | head -1)"
   if [ -z "$readme_entry" ]; then
     fail "$id: the package declares no readme -- its registry page shows nothing (PackageReadmeFile)"
-  elif ! printf '%s\n' "$entries" | grep -qxF -- "$readme_entry"; then
+  elif ! grep -qxF -- "$readme_entry" <<< "$entries"; then
     fail "$id: declares readme '$readme_entry' but the package does not contain it"
   fi
 
-  if ! printf '%s\n' "$nuspec" | grep -qE '<license[ >]|<licenseUrl>'; then
+  if ! grep -qE '<license[ >]|<licenseUrl>' <<< "$nuspec"; then
     fail "$id: the package declares no license"
   fi
   echo "checked package $id"
@@ -160,7 +160,7 @@ for dir in "${snippet_dirs[@]}"; do
       fail "$where: the snippet needs $pkg, but no \`dotnet add package $pkg\` line in $readme tells the reader to install it"
       ok=false; continue
     fi
-    if printf '%s\n' "${packed_ids[@]}" | grep -qixF -- "$pkg"; then
+    if grep -qixF -- "$pkg" <<< "$(printf '%s\n' "${packed_ids[@]}")"; then
       v="$version"
     elif [ "${entry#*@}" != "$entry" ]; then
       v="${entry#*@}"
@@ -193,7 +193,7 @@ EOF
     echo "ok: $where compiles with: $wanted"
   else
     fail "$where does not compile with the packages its marker names ($wanted):"
-    printf '%s\n' "$build_out" | grep -E ' error ' | sed -E 's/ \[[^]]*\]$//; s/^.*Program\.cs/    Program.cs/' | sort -u | head -20
+    printf '%s\n' "$build_out" | grep -E ' error ' | sed -E 's/ \[[^]]*\]$//; s/^.*Program\.cs/    Program.cs/' | sort -u | sed -n '1,20p'
   fi
 done
 
